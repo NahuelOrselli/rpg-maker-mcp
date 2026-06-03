@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { FileHandler } from "../utils/fileHandler.js";
 import { DocumentationIndex, type DocSection, type KnowledgeKind } from "./documentationIndex.js";
+import { WorkspacePaths } from "../workspace/paths.js";
 
 const searchSchema = z.object({
     query: z.string().min(1).describe("Search query"),
@@ -44,8 +45,8 @@ function registerKindTool(
     });
 }
 
-export function registerKnowledgeTools(server: McpServer, fileHandler: FileHandler) {
-    const documentationIndex = new DocumentationIndex(fileHandler);
+export function registerKnowledgeTools(server: McpServer, _fileHandler: FileHandler, workspacePaths: WorkspacePaths) {
+    const documentationIndex = new DocumentationIndex(workspacePaths);
 
     server.tool(
         "knowledge.search",

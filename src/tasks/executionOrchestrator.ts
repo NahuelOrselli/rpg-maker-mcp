@@ -9,6 +9,7 @@ import { DocumentationIndex } from "../knowledge/documentationIndex.js";
 import { ConsistencyValidator } from "../project/consistencyValidator.js";
 import { HistoryStore, type TaskExecutionLog } from "./historyStore.js";
 import { RpgToolExecutor } from "./rpgToolExecutor.js";
+import { WorkspacePaths } from "../workspace/paths.js";
 
 export interface TaskPreviewResult {
     taskId: string;
@@ -44,12 +45,12 @@ export class ExecutionOrchestrator {
     private historyStore: HistoryStore;
     private toolExecutor: RpgToolExecutor;
 
-    constructor(private fileHandler: FileHandler, safeWriter: SafeWriter) {
-        this.taskRepository = new TaskRepository(fileHandler);
-        this.stateReader = new ProjectStateReader(fileHandler);
-        this.documentationIndex = new DocumentationIndex(fileHandler);
-        this.consistencyValidator = new ConsistencyValidator(fileHandler);
-        this.historyStore = new HistoryStore(fileHandler);
+    constructor(private fileHandler: FileHandler, safeWriter: SafeWriter, private workspacePaths: WorkspacePaths) {
+        this.taskRepository = new TaskRepository(fileHandler, workspacePaths);
+        this.stateReader = new ProjectStateReader(fileHandler, workspacePaths);
+        this.documentationIndex = new DocumentationIndex(workspacePaths);
+        this.consistencyValidator = new ConsistencyValidator(fileHandler, workspacePaths);
+        this.historyStore = new HistoryStore(fileHandler, workspacePaths);
         this.toolExecutor = new RpgToolExecutor(fileHandler, safeWriter);
     }
 
@@ -193,8 +194,7 @@ export class ExecutionOrchestrator {
     }
 
     private async markTaskDone(taskId: string): Promise<void> {
-        const projectPath = this.fileHandler.getProjectPath();
-        const filePath = path.join(projectPath, "estado_proyecto.md");
+        const filePath = this.workspacePaths.statePath;
         const doneSet = await this.stateReader.loadDoneTaskIds();
         if (doneSet.has(taskId)) return;
 

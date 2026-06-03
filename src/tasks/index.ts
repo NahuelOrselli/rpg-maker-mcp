@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { FileHandler } from "../utils/fileHandler.js";
 import { SafeWriter } from "../utils/safeWriter.js";
 import { ExecutionOrchestrator } from "./executionOrchestrator.js";
+import { WorkspacePaths } from "../workspace/paths.js";
 
 const byTaskSchema = z.object({
     taskId: z.string().min(1).describe("Task ID to inspect/execute"),
@@ -13,8 +14,8 @@ const historySchema = z.object({
     limit: z.number().int().min(1).max(500).default(50).describe("Max history entries"),
 });
 
-export function registerTaskTools(server: McpServer, fileHandler: FileHandler, safeWriter: SafeWriter) {
-    const orchestrator = new ExecutionOrchestrator(fileHandler, safeWriter);
+export function registerTaskTools(server: McpServer, fileHandler: FileHandler, safeWriter: SafeWriter, workspacePaths: WorkspacePaths) {
+    const orchestrator = new ExecutionOrchestrator(fileHandler, safeWriter, workspacePaths);
 
     server.tool(
         "task.preview",

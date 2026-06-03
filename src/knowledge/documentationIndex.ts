@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { FileHandler } from "../utils/fileHandler.js";
+import { WorkspacePaths } from "../workspace/paths.js";
 
 export type KnowledgeKind = "character" | "location" | "chapter" | "quest";
 
@@ -22,7 +22,7 @@ const KIND_KEYWORDS: Record<KnowledgeKind, string[]> = {
 export class DocumentationIndex {
     private cache: DocSection[] | null = null;
 
-    constructor(private fileHandler: FileHandler) { }
+    constructor(private workspacePaths: WorkspacePaths) { }
 
     async search(query: string, limit = 20): Promise<DocSection[]> {
         const sections = await this.getSections();
@@ -57,12 +57,13 @@ export class DocumentationIndex {
     private async getSections(): Promise<DocSection[]> {
         if (this.cache) return this.cache;
 
-        const docsRoot = path.join(this.fileHandler.getProjectPath(), "docs");
+        const docsRoot = this.workspacePaths.docsPath;
         const markdownFiles = await this.collectMarkdownFiles(docsRoot);
 
         const allSections: DocSection[] = [];
         for (const filePath of markdownFiles) {
-            const relative = path.relative(this.fileHandler.getProjectPath(), filePath).replaceAll(path.sep, "/");
+            const relativeInsideDocs = path.relative(docsRoot, filePath).replaceAll(path.sep, "/");
+            const relative = `${path.basename(docsRoot)}/${relativeInsideDocs}`;
             const content = await fs.readFile(filePath, "utf-8");
             const sections = this.parseSections(relative, content);
             allSections.push(...sections);
@@ -138,7 +139,7 @@ export class DocumentationIndex {
                 const fullPath = path.join(dir, entry.name);
                 if (entry.isDirectory()) {
                     await walk(fullPath);
-                } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+                } else if (entry.isFile() && this.isDocFile(entry.name)) {
                     results.push(fullPath);
                 }
             }
@@ -146,5 +147,10 @@ export class DocumentationIndex {
 
         await walk(rootDir);
         return results;
+    }
+
+    private isDocFile(name: string): boolean {
+        const lower = name.toLowerCase();
+        return lower.endsWith(".md") || lower.endsWith(".txt");
     }
 }

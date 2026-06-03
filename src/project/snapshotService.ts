@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { FileHandler } from "../utils/fileHandler.js";
 import type { EntityType } from "./types.js";
+import { WorkspacePaths } from "../workspace/paths.js";
 
 const ENTITY_FILES: Record<EntityType, string> = {
     actor: "Actors.json",
@@ -28,11 +29,10 @@ export interface ProjectSnapshot {
 }
 
 export class ProjectSnapshotService {
-    constructor(private fileHandler: FileHandler) { }
+    constructor(private fileHandler: FileHandler, private workspacePaths: WorkspacePaths) { }
 
     async createSnapshot(): Promise<ProjectSnapshot> {
-        const projectPath = this.fileHandler.getProjectPath();
-        const docsRoot = path.join(projectPath, "docs");
+        const docsRoot = this.workspacePaths.docsPath;
 
         const paths = {
             docsExists: await this.existsAbsolute(docsRoot),
@@ -94,7 +94,7 @@ export class ProjectSnapshotService {
                 const fullPath = path.join(dir, entry.name);
                 if (entry.isDirectory()) {
                     await walk(fullPath);
-                } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+                } else if (entry.isFile() && this.isDocFile(entry.name)) {
                     count += 1;
                 }
             }
@@ -102,6 +102,11 @@ export class ProjectSnapshotService {
 
         await walk(rootDir);
         return count;
+    }
+
+    private isDocFile(name: string): boolean {
+        const lower = name.toLowerCase();
+        return lower.endsWith(".md") || lower.endsWith(".txt");
     }
 
     private async existsAbsolute(targetPath: string): Promise<boolean> {

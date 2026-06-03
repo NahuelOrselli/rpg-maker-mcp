@@ -7,6 +7,8 @@ import { TaskRepository } from "./taskRepository.js";
 import { DependencyGraph } from "./dependencyGraph.js";
 import { ProjectStateReader } from "./projectStateReader.js";
 import type { PlannerIssue, TaskDefinition } from "./types.js";
+import { WorkspacePaths } from "../workspace/paths.js";
+import { TaskGenerator } from "./taskGenerator.js";
 
 const byTaskSchema = z.object({
     taskId: z.string().min(1).describe("Task ID"),
@@ -14,6 +16,33 @@ const byTaskSchema = z.object({
 
 const nextTaskSchema = z.object({
     includeInProgress: z.boolean().default(false).describe("Include tasks already in progress"),
+});
+
+const generateForChapterSchema = z.object({
+    chapter: z.string().min(1).describe("Chapter title or identifier"),
+    docsRoot: z.string().optional().describe("Optional docs root relative to workspace"),
+    maxTasks: z.number().int().min(1).max(200).default(30).describe("Maximum generated tasks"),
+    strict: z.boolean().default(true).describe("Strict mode for deterministic actionable tasks"),
+});
+
+const generateFromDocsSchema = z.object({
+    docsRoot: z.string().optional().describe("Optional docs root relative to workspace"),
+    includeChapters: z.array(z.string().min(1)).default([]).describe("Optional chapter filters"),
+    maxTasks: z.number().int().min(1).max(500).default(80).describe("Maximum generated tasks"),
+    strict: z.boolean().default(true).describe("Strict mode for deterministic actionable tasks"),
+});
+
+const refinePlanSchema = z.object({
+    planId: z.string().min(1).describe("Generated plan ID"),
+    dedupe: z.boolean().default(true).describe("Remove duplicated tasks"),
+    recomputeDependencies: z.boolean().default(true).describe("Recompute or normalize dependencies"),
+});
+
+const publishBacklogSchema = z.object({
+    planId: z.string().min(1).describe("Generated plan ID"),
+    targetTasksFile: z.string().min(1).describe("Target file path for tasks JSON"),
+    targetPlanningFile: z.string().min(1).describe("Target file path for planning JSON"),
+    updateEstadoProyecto: z.boolean().default(true).describe("Append generated tasks to estado_proyecto"),
 });
 
 function summarizeTask(task: TaskDefinition) {
@@ -24,13 +53,15 @@ function summarizeTask(task: TaskDefinition) {
         priority: task.priority,
         dependencies: task.dependencies,
         sources: task.sources,
+        actions: task.actions,
         file: task.file,
     };
 }
 
-export function registerPlannerTools(server: McpServer, fileHandler: FileHandler) {
-    const taskRepository = new TaskRepository(fileHandler);
-    const stateReader = new ProjectStateReader(fileHandler);
+export function registerPlannerTools(server: McpServer, fileHandler: FileHandler, workspacePaths: WorkspacePaths) {
+    const taskRepository = new TaskRepository(fileHandler, workspacePaths);
+    const stateReader = new ProjectStateReader(fileHandler, workspacePaths);
+    const taskGenerator = new TaskGenerator(workspacePaths);
 
     server.tool(
         "planner.load_task",
@@ -124,7 +155,7 @@ export function registerPlannerTools(server: McpServer, fileHandler: FileHandler
                 }
 
                 for (const source of task.sources) {
-                    const sourcePath = path.join(fileHandler.getProjectPath(), source);
+                    const sourcePath = path.join(workspacePaths.workspaceRoot, source);
                     const exists = await existsAbsolute(sourcePath);
                     if (!exists) {
                         issues.push({
@@ -188,6 +219,99 @@ export function registerPlannerTools(server: McpServer, fileHandler: FileHandler
                             2
                         ),
                     }],
+                };
+            } catch (error) {
+                return {
+                    content: [{ type: "text" as const, text: `Error: ${error}` }],
+                    isError: true,
+                };
+            }
+        }
+    );
+
+    server.tool(
+        "planner.generate_for_chapter",
+        "Generate a draft plan from docs for a specific chapter",
+        generateForChapterSchema.shape,
+        async (args) => {
+            try {
+                const plan = await taskGenerator.generateForChapter(args.chapter, {
+                    docsRoot: args.docsRoot,
+                    maxTasks: args.maxTasks,
+                    strict: args.strict,
+                });
+                return {
+                    content: [{ type: "text" as const, text: JSON.stringify(plan, null, 2) }],
+                };
+            } catch (error) {
+                return {
+                    content: [{ type: "text" as const, text: `Error: ${error}` }],
+                    isError: true,
+                };
+            }
+        }
+    );
+
+    server.tool(
+        "planner.generate_from_docs",
+        "Generate a draft plan from docs globally or by chapter filters",
+        generateFromDocsSchema.shape,
+        async (args) => {
+            try {
+                const plan = await taskGenerator.generateFromDocs({
+                    docsRoot: args.docsRoot,
+                    includeChapters: args.includeChapters,
+                    maxTasks: args.maxTasks,
+                    strict: args.strict,
+                });
+                return {
+                    content: [{ type: "text" as const, text: JSON.stringify(plan, null, 2) }],
+                };
+            } catch (error) {
+                return {
+                    content: [{ type: "text" as const, text: `Error: ${error}` }],
+                    isError: true,
+                };
+            }
+        }
+    );
+
+    server.tool(
+        "planner.refine_plan",
+        "Refine a generated draft plan (dedupe and dependency normalization)",
+        refinePlanSchema.shape,
+        async (args) => {
+            try {
+                const refined = await taskGenerator.refinePlan(args.planId, {
+                    dedupe: args.dedupe,
+                    recomputeDependencies: args.recomputeDependencies,
+                });
+                return {
+                    content: [{ type: "text" as const, text: JSON.stringify(refined, null, 2) }],
+                };
+            } catch (error) {
+                return {
+                    content: [{ type: "text" as const, text: `Error: ${error}` }],
+                    isError: true,
+                };
+            }
+        }
+    );
+
+    server.tool(
+        "planner.publish_backlog",
+        "Publish a generated plan into tasks/planning/state files",
+        publishBacklogSchema.shape,
+        async (args) => {
+            try {
+                const published = await taskGenerator.publishBacklog({
+                    planId: args.planId,
+                    targetTasksFile: args.targetTasksFile,
+                    targetPlanningFile: args.targetPlanningFile,
+                    updateEstadoProyecto: args.updateEstadoProyecto,
+                });
+                return {
+                    content: [{ type: "text" as const, text: JSON.stringify(published, null, 2) }],
                 };
             } catch (error) {
                 return {

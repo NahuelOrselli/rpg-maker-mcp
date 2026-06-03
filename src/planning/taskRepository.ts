@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { FileHandler } from "../utils/fileHandler.js";
 import type { PlannerTaskStatus, TaskDefinition } from "./types.js";
+import { WorkspacePaths } from "../workspace/paths.js";
 
 interface RawTask {
     id?: unknown;
@@ -25,11 +26,11 @@ const STATUS_MAP: Record<string, PlannerTaskStatus> = {
 };
 
 export class TaskRepository {
-    constructor(private fileHandler: FileHandler) { }
+    constructor(private fileHandler: FileHandler, private workspacePaths: WorkspacePaths) { }
 
     async loadAll(): Promise<TaskDefinition[]> {
-        const projectPath = this.fileHandler.getProjectPath();
-        const roots = [path.join(projectPath, "tasks"), path.join(projectPath, "planning")];
+        const projectPath = this.workspacePaths.workspaceRoot;
+        const roots = [this.workspacePaths.tasksPath, this.workspacePaths.planningPath];
         const files = await this.collectJsonFiles(roots);
 
         const tasks: TaskDefinition[] = [];

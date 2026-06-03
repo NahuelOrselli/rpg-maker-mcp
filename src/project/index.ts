@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { FileHandler } from "../utils/fileHandler.js";
 import { ProjectSnapshotService } from "./snapshotService.js";
 import { ConsistencyValidator } from "./consistencyValidator.js";
+import { WorkspacePaths } from "../workspace/paths.js";
 
 const diffSchema = z.object({
     limit: z.number().int().min(1).max(500).default(50).describe("Max IDs per list"),
@@ -12,9 +13,9 @@ const auditSchema = z.object({
     limit: z.number().int().min(1).max(500).default(50).describe("Max IDs per list"),
 });
 
-export function registerProjectTools(server: McpServer, fileHandler: FileHandler) {
-    const snapshotService = new ProjectSnapshotService(fileHandler);
-    const consistencyValidator = new ConsistencyValidator(fileHandler);
+export function registerProjectTools(server: McpServer, fileHandler: FileHandler, workspacePaths: WorkspacePaths) {
+    const snapshotService = new ProjectSnapshotService(fileHandler, workspacePaths);
+    const consistencyValidator = new ConsistencyValidator(fileHandler, workspacePaths);
 
     server.tool(
         "project.status",

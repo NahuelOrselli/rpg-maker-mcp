@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { FileHandler } from "../utils/fileHandler.js";
+import { WorkspacePaths } from "../workspace/paths.js";
 
 export interface TaskExecutionLog {
     timestamp: string;
@@ -13,10 +14,10 @@ export interface TaskExecutionLog {
 }
 
 export class HistoryStore {
-    constructor(private fileHandler: FileHandler) { }
+    constructor(private _fileHandler: FileHandler, private workspacePaths: WorkspacePaths) { }
 
     async append(log: TaskExecutionLog): Promise<string> {
-        const logsDir = path.join(this.fileHandler.getProjectPath(), "logs");
+        const logsDir = this.workspacePaths.logsPath;
         await fs.mkdir(logsDir, { recursive: true });
 
         const safeTaskId = log.taskId.replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -24,11 +25,11 @@ export class HistoryStore {
         const fileName = `${stamp}-${safeTaskId}.json`;
         const fullPath = path.join(logsDir, fileName);
         await fs.writeFile(fullPath, JSON.stringify(log, null, 2), "utf-8");
-        return `logs/${fileName}`;
+        return path.join(path.basename(logsDir), fileName).replaceAll(path.sep, "/");
     }
 
     async list(taskId?: string, limit = 50): Promise<Array<{ file: string; log: TaskExecutionLog }>> {
-        const logsDir = path.join(this.fileHandler.getProjectPath(), "logs");
+        const logsDir = this.workspacePaths.logsPath;
         let entries: string[];
         try {
             entries = await fs.readdir(logsDir);
@@ -49,7 +50,7 @@ export class HistoryStore {
                 if (taskId && parsed.taskId !== taskId) {
                     continue;
                 }
-                results.push({ file: `logs/${file}`, log: parsed });
+                results.push({ file: path.join(path.basename(logsDir), file).replaceAll(path.sep, "/"), log: parsed });
                 if (results.length >= Math.max(1, limit)) {
                     break;
                 }

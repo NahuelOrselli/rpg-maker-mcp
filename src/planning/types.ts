@@ -5,6 +5,12 @@ export interface TaskAction {
     arguments: Record<string, unknown>;
 }
 
+export interface SourceRef {
+    file: string;
+    lineStart: number;
+    excerpt: string;
+}
+
 export interface TaskDefinition {
     id: string;
     title: string;
@@ -15,6 +21,20 @@ export interface TaskDefinition {
     sources: string[];
     actions: TaskAction[];
     file: string;
+}
+
+export interface GeneratedTask extends TaskDefinition {
+    sourceRefs: SourceRef[];
+    confidence: number;
+    assumptions: string[];
+}
+
+export interface GeneratedPlan {
+    chapter: string;
+    planId: string;
+    tasks: GeneratedTask[];
+    warnings: string[];
+    unmappedNarrative: string[];
 }
 
 export interface PlannerIssue {

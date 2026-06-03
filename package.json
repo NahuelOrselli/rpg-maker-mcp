@@ -1,6 +1,6 @@
 {
   "name": "jrpg-mcp",
-  "version": "0.2.0-rc1",
+  "version": "0.2.0-rc2",
   "description": "JRPG MCP server for RPG Maker MZ project manipulation",
   "type": "module",
   "main": "dist/index.js",

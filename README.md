@@ -1,38 +1,52 @@
 # 🎮 JRPG-MCP
 
-Servidor **MCP (Model Context Protocol)** para construir y operar proyectos **JRPG en RPG Maker MZ** con enfoque de plataforma: herramientas RPG + conocimiento documental + planificación + ejecución de tareas.
+JRPG-MCP is an **MCP (Model Context Protocol) server** for building and operating JRPG projects on top of **RPG Maker MZ**.
 
-## 🌟 ¿Qué incluye?
+It combines:
 
-- 🛠️ **Capa RPG Maker sólida**: CRUD de database, mapas, eventos, system, plugins y recursos.
-- 📚 **Knowledge Layer**: consulta determinista de `docs/` (`knowledge.*`).
-- 📊 **Project Layer**: estado, validación, diff y auditoría de consistencia (`project.*`).
-- 🧭 **Planning Layer**: carga de tareas, dependencias, siguiente tarea (`planner.*`).
-- ⚙️ **Task Layer**: preview/execute/history con auditoría (`task.*`).
+- a stable RPG Maker tool layer (CRUD + safe writes)
+- deterministic documentation querying
+- project consistency checks
+- planning/dependency tooling
+- task orchestration with audit logging
 
-## 🧱 Arquitectura por capas
+## Important Architecture Rule
 
-Estructura principal en `src/`:
+The MCP repository is the engine.
 
-- `src/tools/` → herramientas RPG Maker existentes (compatibles)
-- `src/knowledge/` → lectura de documentación
-- `src/project/` → estado y validación proyecto/docs
-- `src/planning/` → planificación y dependencias
-- `src/tasks/` → orquestación de ejecución y logs
-- `src/utils/` → `FileHandler`, `SafeWriter`, tipos comunes
+Your narrative and planning content must live in an **external workspace** (not inside this repo).
 
-## 🔐 Seguridad y compatibilidad
+## ✨ What You Get
 
-- ✅ `SafeWriter` para mutaciones críticas.
-- ✅ Backup `.bak` automático cuando aplica.
-- ✅ Refresh de `System.json.versionId`.
-- ✅ Validación de input con `zod`.
-- ✅ Preflight de proyecto (`game.rmmzproject` + `data/System.json`).
-- ✅ No se eliminan ni rompen tools RPG existentes.
+- 🛠️ **RPG Layer**: database/map/event/system/plugin/resource tools
+- 📚 **Knowledge Layer**: deterministic search over docs (`.md` + `.txt`)
+- 📊 **Project Layer**: status, validation, diff, audit
+- 🧭 **Planning Layer**: load tasks, dependency graph, validation, next-task selection
+- ⚙️ **Task Layer**: preview/execute/history with logs
+- 🤖 **Task Generator**: generate draft backlogs from chapter docs
 
-## 🧰 Herramientas destacadas
+## 🧱 Source Layout
 
-### RPG Layer (extracto)
+- `src/tools/` -> existing RPG Maker tools (kept compatible)
+- `src/knowledge/` -> docs index + `knowledge.*`
+- `src/project/` -> project analysis + `project.*`
+- `src/planning/` -> planning + generator + `planner.*`
+- `src/tasks/` -> task orchestration + `task.*`
+- `src/workspace/` -> workspace path resolution
+- `src/utils/` -> file access + safe writer + shared types
+
+## 🔐 Safety and Compatibility
+
+- `SafeWriter` for critical writes
+- automatic `.bak` creation when applicable
+- `System.json.versionId` refresh
+- zod input validation for tools
+- startup preflight for RPG Maker project path
+- existing RPG tools preserved (no contract breakage)
+
+## 🧰 Tool Highlights
+
+### RPG Layer (subset)
 - `get_database_info`
 - `get_actors`, `create_actor`, `update_actor`
 - `get_items`, `create_item`, `update_item`
@@ -58,69 +72,100 @@ Estructura principal en `src/`:
 - `planner.load_task`
 - `planner.dependencies`
 - `planner.validate_task`
+- `planner.generate_for_chapter` ⭐
+- `planner.generate_from_docs`
+- `planner.refine_plan`
+- `planner.publish_backlog`
 
 ### Task Layer
 - `task.preview`
 - `task.execute`
 - `task.history`
 
-## 📁 Plantillas oficiales (recomendado)
+## 🤖 New: Chapter-to-Backlog Generator
 
-Usa estas plantillas para arrancar rápido:
+You can now generate a draft plan directly from chapter docs.
+
+Typical flow:
+
+1. Put chapter docs in your workspace `docs/` (`.md` or `.txt`)
+2. Run `planner.generate_for_chapter`
+3. Optionally run `planner.refine_plan`
+4. Publish with `planner.publish_backlog`
+5. Execute with `task.preview` / `task.execute`
+
+The generator is deterministic and source-traceable. It does not invent story content.
+
+## 📁 Official Templates
 
 - `tasks/templates/task.template.json`
 - `planning/templates/roadmap.template.json`
 - `estado_proyecto.template.md`
 
-Flujo recomendado:
-
-1. Crear tareas JSON desde plantilla.
-2. Registrar estado inicial en `estado_proyecto.md`.
-3. Ejecutar `planner.validate_task` y `task.preview`.
-4. Ejecutar `task.execute`.
-5. Revisar `logs/` con `task.history`.
-
-## 🚀 Instalación
+## 🚀 Install
 
 ```bash
 npm install
 npm run build
 ```
 
-## ⚙️ Configuración
+## ⚙️ Configuration
 
-Variables de entorno:
+### Required
 
-- `RPGMAKER_PROJECT_PATH` (obligatoria)
-- `RPGMAKER_ENGINE_PATH` (opcional)
+- `RPGMAKER_PROJECT_PATH` -> your RPG Maker MZ project
+- `JRPG_WORKSPACE_PATH` -> your narrative/planning workspace root
 
-Ejemplo de configuración MCP:
+### Optional path overrides
+
+- `JRPG_DOCS_PATH` (default: `${JRPG_WORKSPACE_PATH}/docs`)
+- `JRPG_PLANNING_PATH` (default: `${JRPG_WORKSPACE_PATH}/planning`)
+- `JRPG_TASKS_PATH` (default: `${JRPG_WORKSPACE_PATH}/tasks`)
+- `JRPG_STATE_PATH` (default: `${JRPG_WORKSPACE_PATH}/estado_proyecto.md`)
+- `JRPG_LOGS_PATH` (default: `${JRPG_WORKSPACE_PATH}/logs`)
+- `RPGMAKER_ENGINE_PATH` (optional engine resources)
+
+There is **no fallback** from workspace paths to `RPGMAKER_PROJECT_PATH`.
+
+### Example MCP config
 
 ```json
 {
   "mcpServers": {
     "jrpg-mcp": {
       "command": "node",
-      "args": ["/ruta/a/jrpg-mcp/dist/index.js"],
+      "args": ["/path/to/jrpg-mcp/dist/index.js"],
       "env": {
-        "RPGMAKER_PROJECT_PATH": "/ruta/a/tu/proyecto-rmmz",
-        "RPGMAKER_ENGINE_PATH": "/ruta/a/RPG Maker MZ"
+        "RPGMAKER_PROJECT_PATH": "/path/to/game-rmmz",
+        "JRPG_WORKSPACE_PATH": "/path/to/game-workspace",
+        "RPGMAKER_ENGINE_PATH": "/path/to/RPG Maker MZ"
       }
     }
   }
 }
 ```
 
-## ▶️ Uso
+## 🗂️ Recommended External Workspace
+
+```text
+my-jrpg-workspace/
+  docs/
+  planning/
+  tasks/
+  estado_proyecto.md
+  logs/
+```
+
+## ▶️ Run
 
 ```bash
 npm start
 ```
 
-## ✅ Estado de release
-
-Versión actual: **`0.2.0-rc1`**
-
-Documento de arquitectura activo:
+## 📘 Architecture Doc
 
 - `docs/phase2-architecture.md`
+
+## ✅ Release
+
+Current version: **`0.2.0-rc1`**

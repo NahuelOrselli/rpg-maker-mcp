@@ -3,6 +3,7 @@ import * as path from "node:path";
 import type { EntityType, ProjectIssue } from "./types.js";
 import { FileHandler } from "../utils/fileHandler.js";
 import { ProjectSnapshotService, getEntityFiles } from "./snapshotService.js";
+import { WorkspacePaths } from "../workspace/paths.js";
 
 const REFERENCE_REGEX = /\b(actor|class|item|skill|weapon|armor|enemy|state|map):\s*(\d+)\b/gi;
 const MARKDOWN_LINK_REGEX = /\[[^\]]+\]\(([^)]+)\)/g;
@@ -16,8 +17,8 @@ interface DocReference {
 export class ConsistencyValidator {
     private snapshotService: ProjectSnapshotService;
 
-    constructor(private fileHandler: FileHandler) {
-        this.snapshotService = new ProjectSnapshotService(fileHandler);
+    constructor(private fileHandler: FileHandler, private workspacePaths: WorkspacePaths) {
+        this.snapshotService = new ProjectSnapshotService(fileHandler, workspacePaths);
     }
 
     async validate(): Promise<ProjectIssue[]> {
@@ -28,8 +29,8 @@ export class ConsistencyValidator {
             issues.push({
                 kind: "structure",
                 severity: "warn",
-                message: "docs/ directory not found",
-                source: "docs",
+                message: `Docs directory not found: ${this.workspacePaths.docsPath}`,
+                source: this.workspacePaths.docsPath,
             });
             return issues;
         }
@@ -110,15 +111,15 @@ export class ConsistencyValidator {
     }
 
     private async extractReferencesAndLinks(): Promise<{ references: DocReference[]; linkIssues: ProjectIssue[] }> {
-        const projectPath = this.fileHandler.getProjectPath();
-        const docsRoot = path.join(projectPath, "docs");
+        const docsRoot = this.workspacePaths.docsPath;
         const markdownFiles = await this.collectMarkdownFiles(docsRoot);
 
         const references: DocReference[] = [];
         const linkIssues: ProjectIssue[] = [];
 
         for (const fullPath of markdownFiles) {
-            const relativeFile = path.relative(projectPath, fullPath).replaceAll(path.sep, "/");
+            const relativeInsideDocs = path.relative(docsRoot, fullPath).replaceAll(path.sep, "/");
+            const relativeFile = `${path.basename(docsRoot)}/${relativeInsideDocs}`;
             const content = await fs.readFile(fullPath, "utf-8");
 
             let refMatch: RegExpExecArray | null;
@@ -187,7 +188,7 @@ export class ConsistencyValidator {
                 const fullPath = path.join(dir, entry.name);
                 if (entry.isDirectory()) {
                     await walk(fullPath);
-                } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+                } else if (entry.isFile() && this.isDocFile(entry.name)) {
                     results.push(fullPath);
                 }
             }
@@ -195,6 +196,11 @@ export class ConsistencyValidator {
 
         await walk(rootDir);
         return results;
+    }
+
+    private isDocFile(name: string): boolean {
+        const lower = name.toLowerCase();
+        return lower.endsWith(".md") || lower.endsWith(".txt");
     }
 
     private async existsAbsolute(filePath: string): Promise<boolean> {

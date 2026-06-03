@@ -1,16 +1,16 @@
 import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { FileHandler } from "../utils/fileHandler.js";
+import { WorkspacePaths } from "../workspace/paths.js";
 
 const COMPLETED_LINE_REGEX = /\b([A-Za-z][A-Za-z0-9_-]*-\d+)\b.*\b(done|completed|hecho)\b/i;
 const CHECKBOX_DONE_REGEX = /\[[xX]\]\s*([A-Za-z][A-Za-z0-9_-]*-\d+)/;
 
 export class ProjectStateReader {
-    constructor(private fileHandler: FileHandler) { }
+    constructor(private _fileHandler: FileHandler, private workspacePaths: WorkspacePaths) { }
 
     async loadDoneTaskIds(): Promise<Set<string>> {
         const done = new Set<string>();
-        const statePath = path.join(this.fileHandler.getProjectPath(), "estado_proyecto.md");
+        const statePath = this.workspacePaths.statePath;
 
         let content: string;
         try {

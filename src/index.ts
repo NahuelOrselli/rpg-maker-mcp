@@ -25,6 +25,7 @@ import { registerKnowledgeTools } from "./knowledge/index.js";
 import { registerProjectTools } from "./project/index.js";
 import { registerPlannerTools } from "./planning/index.js";
 import { registerTaskTools } from "./tasks/index.js";
+import { resolveWorkspacePathsFromEnv } from "./workspace/paths.js";
 
 // Get configuration from environment variables
 const projectPath = process.env.RPGMAKER_PROJECT_PATH;
@@ -34,6 +35,15 @@ if (!projectPath) {
     console.error("Error: RPGMAKER_PROJECT_PATH environment variable is required");
     process.exit(1);
 }
+
+const workspacePaths = (() => {
+    try {
+        return resolveWorkspacePathsFromEnv();
+    } catch (error) {
+        console.error(`Error: ${error}`);
+        process.exit(1);
+    }
+})();
 
 const projectPathIsValid = await validateProjectPath(projectPath);
 if (!projectPathIsValid) {
@@ -67,10 +77,10 @@ registerArmorTools(server, fileHandler, safeWriter);
 registerActorTools(server, fileHandler, safeWriter);
 registerClassTools(server, fileHandler, safeWriter);
 registerSystemTools(server, fileHandler, safeWriter);
-registerKnowledgeTools(server, fileHandler);
-registerProjectTools(server, fileHandler);
-registerPlannerTools(server, fileHandler);
-registerTaskTools(server, fileHandler, safeWriter);
+registerKnowledgeTools(server, fileHandler, workspacePaths);
+registerProjectTools(server, fileHandler, workspacePaths);
+registerPlannerTools(server, fileHandler, workspacePaths);
+registerTaskTools(server, fileHandler, safeWriter, workspacePaths);
 
 // Start server with stdio transport
 async function main() {
@@ -80,6 +90,7 @@ async function main() {
     // Log to stderr so it doesn't interfere with MCP protocol on stdout
     console.error("JRPG MCP Server started");
     console.error(`Project: ${projectPath}`);
+    console.error(`Workspace: ${workspacePaths.workspaceRoot}`);
     if (enginePath) {
         console.error(`Engine: ${enginePath}`);
     }
