@@ -21,6 +21,10 @@ import { registerArmorTools } from "./tools/armorTools.js";
 import { registerActorTools } from "./tools/actorTools.js";
 import { registerClassTools } from "./tools/classTools.js";
 import { registerSystemTools } from "./tools/systemTools.js";
+import { registerKnowledgeTools } from "./knowledge/index.js";
+import { registerProjectTools } from "./project/index.js";
+import { registerPlannerTools } from "./planning/index.js";
+import { registerTaskTools } from "./tasks/index.js";
 
 // Get configuration from environment variables
 const projectPath = process.env.RPGMAKER_PROJECT_PATH;
@@ -45,7 +49,7 @@ const safeWriter = new SafeWriter(fileHandler);
 // Initialize MCP server
 const server = new McpServer({
     name: "jrpg-mcp",
-    version: "0.1.0",
+    version: "0.2.0",
 });
 
 // Register all tools
@@ -63,6 +67,10 @@ registerArmorTools(server, fileHandler, safeWriter);
 registerActorTools(server, fileHandler, safeWriter);
 registerClassTools(server, fileHandler, safeWriter);
 registerSystemTools(server, fileHandler, safeWriter);
+registerKnowledgeTools(server, fileHandler);
+registerProjectTools(server, fileHandler);
+registerPlannerTools(server, fileHandler);
+registerTaskTools(server, fileHandler, safeWriter);
 
 // Start server with stdio transport
 async function main() {

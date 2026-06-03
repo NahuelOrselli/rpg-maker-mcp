@@ -1,0 +1,34 @@
+[
+  {
+    "id": "TASK-090",
+    "title": "Prepare chapter references",
+    "description": "Create or update docs references before execution tasks",
+    "status": "done",
+    "dependencies": [],
+    "priority": 10,
+    "sources": ["docs/story/main.md"],
+    "actions": []
+  },
+  {
+    "id": "TASK-100",
+    "title": "Implement gameplay skill",
+    "description": "Create one skill from approved docs context",
+    "status": "pending",
+    "dependencies": ["TASK-090"],
+    "priority": 50,
+    "sources": ["docs/story/main.md"],
+    "actions": [
+      {
+        "tool": "create_damage_skill",
+        "arguments": {
+          "name": "Blaze Edge",
+          "damageFormula": "a.atk * 3 - b.def",
+          "mpCost": 8,
+          "scope": 1,
+          "elementId": 2,
+          "description": "Physical fire slash"
+        }
+      }
+    ]
+  }
+]

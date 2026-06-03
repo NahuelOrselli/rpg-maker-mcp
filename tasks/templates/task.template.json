@@ -1,0 +1,22 @@
+{
+  "id": "TASK-100",
+  "title": "Sample task title",
+  "description": "Short deterministic description of the task",
+  "status": "pending",
+  "dependencies": ["TASK-090"],
+  "priority": 50,
+  "sources": ["docs/story/main.md"],
+  "actions": [
+    {
+      "tool": "create_damage_skill",
+      "arguments": {
+        "name": "Blaze Edge",
+        "damageFormula": "a.atk * 3 - b.def",
+        "mpCost": 8,
+        "scope": 1,
+        "elementId": 2,
+        "description": "Physical fire slash"
+      }
+    }
+  ]
+}

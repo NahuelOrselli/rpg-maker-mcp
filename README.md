@@ -1,60 +1,84 @@
-# 🎮 jrpg-mcp
+# 🎮 JRPG-MCP
 
-Servidor **MCP (Model Context Protocol)** para manipular proyectos de **RPG Maker MZ** de forma segura, automatizable y lista para agentes AI.
+Servidor **MCP (Model Context Protocol)** para construir y operar proyectos **JRPG en RPG Maker MZ** con enfoque de plataforma: herramientas RPG + conocimiento documental + planificación + ejecución de tareas.
 
-## ✨ Qué hace
+## 🌟 ¿Qué incluye?
 
-- 📦 Gestiona base de datos del juego: actores, clases, items, skills, armas, armaduras, enemigos y estados.
-- 🗺️ Gestiona mapas y eventos: lectura, creación/edición de eventos y comandos de evento.
-- ⚙️ Gestiona `System.json`: variables, switches, título del juego y posición inicial.
-- 🧩 Gestiona plugins y escaneo de recursos del proyecto/engine.
-- 🛡️ Aplica escritura segura con backup + refresh de `versionId` para evitar corrupción y problemas de sincronización.
+- 🛠️ **Capa RPG Maker sólida**: CRUD de database, mapas, eventos, system, plugins y recursos.
+- 📚 **Knowledge Layer**: consulta determinista de `docs/` (`knowledge.*`).
+- 📊 **Project Layer**: estado, validación, diff y auditoría de consistencia (`project.*`).
+- 🧭 **Planning Layer**: carga de tareas, dependencias, siguiente tarea (`planner.*`).
+- ⚙️ **Task Layer**: preview/execute/history con auditoría (`task.*`).
 
-## 🔒 Seguridad y confiabilidad
+## 🧱 Arquitectura por capas
 
-- `SafeWriter` obligatorio para mutaciones en base de datos/mapas/system.
-- Backup `.bak` automático cuando aplica.
-- Validación de inputs en cada tool.
-- Preflight al iniciar: verifica que `RPGMAKER_PROJECT_PATH` apunte a un proyecto MZ válido (`game.rmmzproject` y `data/System.json`).
+Estructura principal en `src/`:
 
-## 🧰 Herramientas disponibles
+- `src/tools/` → herramientas RPG Maker existentes (compatibles)
+- `src/knowledge/` → lectura de documentación
+- `src/project/` → estado y validación proyecto/docs
+- `src/planning/` → planificación y dependencias
+- `src/tasks/` → orquestación de ejecución y logs
+- `src/utils/` → `FileHandler`, `SafeWriter`, tipos comunes
 
-### Database Core
+## 🔐 Seguridad y compatibilidad
+
+- ✅ `SafeWriter` para mutaciones críticas.
+- ✅ Backup `.bak` automático cuando aplica.
+- ✅ Refresh de `System.json.versionId`.
+- ✅ Validación de input con `zod`.
+- ✅ Preflight de proyecto (`game.rmmzproject` + `data/System.json`).
+- ✅ No se eliminan ni rompen tools RPG existentes.
+
+## 🧰 Herramientas destacadas
+
+### RPG Layer (extracto)
 - `get_database_info`
-
-### Actors
-- `get_actors`, `get_actor`, `search_actors`, `create_actor`, `update_actor`
-
-### Classes
-- `get_classes`, `create_class`, `update_class`
-
-### Items / Equipment
+- `get_actors`, `create_actor`, `update_actor`
 - `get_items`, `create_item`, `update_item`
-- `get_weapons`, `create_weapon`, `update_weapon`
-- `get_armors`, `create_armor`, `update_armor`
-
-### Skills
-- `get_skills`, `get_skill`, `search_skills`, `create_skill`
+- `get_maps`, `get_map`, `create_map`, `update_map`
+- `create_map_event`, `update_map_event`, `add_event_command`
 - `create_damage_skill`, `create_healing_skill`, `create_buff_skill`, `create_debuff_skill`, `create_state_skill`
 
-### Enemies / States
-- `get_enemies`, `create_enemy`, `update_enemy`
-- `get_states`, `create_state`, `update_state`
+### Knowledge Layer
+- `knowledge.search`
+- `knowledge.character`
+- `knowledge.location`
+- `knowledge.chapter`
+- `knowledge.quest`
 
-### Maps / Events
-- `get_maps`, `get_map`, `update_map`, `create_map`
-- `get_map_events`, `get_map_event`, `search_map_events`
-- `create_map_event`, `update_map_event`, `add_event_command`
+### Project Layer
+- `project.status`
+- `project.validate`
+- `project.diff`
+- `project.audit`
 
-### System
-- `get_system`, `get_variables`, `set_variable_name`
-- `get_switches`, `set_switch_name`
-- `get_game_title`, `update_game_title`, `update_starting_position`
+### Planning Layer
+- `planner.next_task`
+- `planner.load_task`
+- `planner.dependencies`
+- `planner.validate_task`
 
-### Plugins / Resources / Limits
-- `get_installed_plugins`, `install_plugin`
-- `scan_resources`, `scan_dlc_packages`, `get_generator_parts`, `get_sample_maps`, `get_core_script_versions`
-- `get_database_limits`, `set_database_limit`
+### Task Layer
+- `task.preview`
+- `task.execute`
+- `task.history`
+
+## 📁 Plantillas oficiales (recomendado)
+
+Usa estas plantillas para arrancar rápido:
+
+- `tasks/templates/task.template.json`
+- `planning/templates/roadmap.template.json`
+- `estado_proyecto.template.md`
+
+Flujo recomendado:
+
+1. Crear tareas JSON desde plantilla.
+2. Registrar estado inicial en `estado_proyecto.md`.
+3. Ejecutar `planner.validate_task` y `task.preview`.
+4. Ejecutar `task.execute`.
+5. Revisar `logs/` con `task.history`.
 
 ## 🚀 Instalación
 
@@ -68,9 +92,9 @@ npm run build
 Variables de entorno:
 
 - `RPGMAKER_PROJECT_PATH` (obligatoria)
-- `RPGMAKER_ENGINE_PATH` (opcional, para tools de recursos del engine)
+- `RPGMAKER_ENGINE_PATH` (opcional)
 
-Ejemplo de config MCP (Claude/VS Code):
+Ejemplo de configuración MCP:
 
 ```json
 {
@@ -93,12 +117,10 @@ Ejemplo de config MCP (Claude/VS Code):
 npm start
 ```
 
-## 📌 Recomendaciones
+## ✅ Estado de release
 
-- Cierra el editor de RPG Maker MZ mientras haces cambios vía MCP.
-- Haz backup del proyecto antes de operaciones grandes.
-- Después de cambios automáticos, abre el proyecto y valida en editor/test play.
+Versión actual: **`0.2.0-rc1`**
 
-## 🧪 Estado de release
+Documento de arquitectura activo:
 
-Versión actual: **`0.1.0-rc1`** ✅
+- `docs/phase2-architecture.md`
