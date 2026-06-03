@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { FileHandler } from "../utils/fileHandler.js";
 import { SafeWriter } from "../utils/safeWriter.js";
-import type { RPGEvent, RPGMap, RPGMapInfo } from "../utils/types.js";
+import type { RPGEvent, RPGEventPage, RPGMap, RPGMapInfo } from "../utils/types.js";
 import { ScrollType } from "../utils/types.js";
 
 const createMapSchema = z.object({
@@ -51,7 +51,7 @@ const createMapEventSchema = z.object({
     x: z.number().int().min(0).describe("Event X position"),
     y: z.number().int().min(0).describe("Event Y position"),
     note: z.string().default("").describe("Event note"),
-    pages: z.array(z.any()).min(1).describe("Event pages"),
+    pages: z.array(z.unknown()).min(1).describe("Event pages"),
 });
 
 const updateMapEventSchema = z.object({
@@ -61,7 +61,7 @@ const updateMapEventSchema = z.object({
     x: z.number().int().min(0).optional(),
     y: z.number().int().min(0).optional(),
     note: z.string().optional(),
-    pages: z.array(z.any()).min(1).optional(),
+    pages: z.array(z.unknown()).min(1).optional(),
 });
 
 const addEventCommandSchema = z.object({
@@ -71,7 +71,7 @@ const addEventCommandSchema = z.object({
     command: z.object({
         code: z.number().int().describe("Event command code"),
         indent: z.number().int().min(0).default(0).describe("Command indent"),
-        parameters: z.array(z.any()).default([]).describe("Command parameters"),
+        parameters: z.array(z.unknown()).default([]).describe("Command parameters"),
     }),
     position: z.number().int().min(0).optional().describe("Insert position in command list"),
 });
@@ -358,7 +358,7 @@ export function registerMapTools(server: McpServer, fileHandler: FileHandler, sa
                     x,
                     y,
                     note,
-                    pages,
+                    pages: pages as RPGEventPage[],
                 };
 
                 while (events.length <= newEventId) {
@@ -413,7 +413,7 @@ export function registerMapTools(server: McpServer, fileHandler: FileHandler, sa
                 if (x !== undefined) event.x = x;
                 if (y !== undefined) event.y = y;
                 if (note !== undefined) event.note = note;
-                if (pages !== undefined) event.pages = pages;
+                if (pages !== undefined) event.pages = pages as RPGEventPage[];
 
                 await safeWriter.writeToDatabase(mapFile, mapData);
 
