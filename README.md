@@ -52,6 +52,11 @@ Your narrative and planning content must live in an **external workspace** (not 
 - `get_items`, `create_item`, `update_item`
 - `get_maps`, `get_map`, `create_map`, `update_map`
 - `create_map_event`, `update_map_event`, `add_event_command`
+- `get_map_tile`, `set_map_tile`, `set_map_tile_rect`
+- `set_map_region_rect`, `set_map_terrain_tag_rect`
+- `replace_event_page_commands`, `patch_event_page_commands`, `move_event_page`
+- `get_active_event_page`, `debug_event_page_conflicts`, `get_playtest_snapshot`
+- `add_narrator_command`
 - `create_damage_skill`, `create_healing_skill`, `create_buff_skill`, `create_debuff_skill`, `create_state_skill`
 
 ### Knowledge Layer

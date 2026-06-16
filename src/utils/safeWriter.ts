@@ -8,11 +8,20 @@ import type { RPGSystem } from "./types.js";
 export class SafeWriter {
     constructor(private fileHandler: FileHandler) { }
 
+    private validateJsonPayload(data: unknown): void {
+        try {
+            JSON.parse(JSON.stringify(data));
+        } catch (error) {
+            throw new Error(`Invalid JSON payload: ${error}`);
+        }
+    }
+
     /**
      * Write to database file with backup and versionId refresh
      */
     async writeToDatabase<T>(filename: string, data: T): Promise<void> {
         const filePath = `data/${filename}`;
+        this.validateJsonPayload(data);
 
         // 1. Create backup if file exists
         if (await this.fileHandler.exists(filePath)) {
@@ -62,12 +71,19 @@ var $plugins = ${JSON.stringify(plugins, null, 2)};
      */
     async writeMap(mapId: number, mapData: unknown, mapInfo: unknown): Promise<void> {
         const mapFilename = `Map${String(mapId).padStart(3, "0")}.json`;
+        this.validateJsonPayload(mapData);
+        this.validateJsonPayload(mapInfo);
 
         // Write map file
-        await this.fileHandler.writeJson(`data/${mapFilename}`, mapData);
+        const mapPath = `data/${mapFilename}`;
+        if (await this.fileHandler.exists(mapPath)) {
+            await this.fileHandler.backup(mapPath);
+        }
+        await this.fileHandler.writeJson(mapPath, mapData);
 
         // Update MapInfos.json
-        const mapInfos = await this.fileHandler.readJson<(unknown | null)[]>("data/MapInfos.json");
+        const mapInfosPath = "data/MapInfos.json";
+        const mapInfos = await this.fileHandler.readJson<(unknown | null)[]>(mapInfosPath);
 
         // Ensure array is large enough
         while (mapInfos.length <= mapId) {
@@ -76,7 +92,10 @@ var $plugins = ${JSON.stringify(plugins, null, 2)};
 
         mapInfos[mapId] = mapInfo;
 
-        await this.fileHandler.writeJson("data/MapInfos.json", mapInfos);
+        if (await this.fileHandler.exists(mapInfosPath)) {
+            await this.fileHandler.backup(mapInfosPath);
+        }
+        await this.fileHandler.writeJson(mapInfosPath, mapInfos);
 
         // Refresh versionId
         await this.refreshVersionId();
